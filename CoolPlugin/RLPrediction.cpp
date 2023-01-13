@@ -54,23 +54,40 @@ void RLPrediction::GameEndedEvent(std::string name)
 
 	CarWrapper me = gameWrapper->GetLocalCar();
 	if (me.IsNull())
+	{
+		this->Log("No local car");
 		return;
+	}
 
 	PriWrapper mePRI = me.GetPRI();
 	if (mePRI.IsNull())
+	{
+		this->Log("No PriWrapper");
 		return;
+	}
 
 	TeamInfoWrapper myTeam = mePRI.GetTeam();
 	if (myTeam.IsNull())
+	{
+		this->Log("No my team");
 		return;
+	}
 
 	// Get TeamNum
 	int my_team_num = myTeam.GetTeamNum();
 
 	ServerWrapper server = gameWrapper->GetOnlineGame();
+	if (server.IsNull())
+	{
+		this->Log("No server");
+		return;
+	}
 	TeamWrapper winningTeam = server.GetGameWinner();
 	if (winningTeam.IsNull())
+	{
+		this->Log("No winning team");
 		return;
+	}
 
 	int teamnum = winningTeam.GetTeamNum();
 
