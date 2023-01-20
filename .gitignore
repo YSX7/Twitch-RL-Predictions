@@ -396,3 +396,6 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
+/CoolPlugin/CoolPlugin.vcxproj.user
+plugins/
+/plugins/RLPrediction.dll
