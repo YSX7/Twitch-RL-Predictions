@@ -71,7 +71,7 @@ void RLPrediction::RenderSettings() {
 		broadcasterCVar.setValue(broadcasterTokenValue);
 	}
 
-#pragma region MyRegion
+#pragma region Examples
 
 
 

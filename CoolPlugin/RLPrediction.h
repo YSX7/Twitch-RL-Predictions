@@ -21,15 +21,28 @@ struct PredictionIds {
 
 class RLPrediction : public BakkesMod::Plugin::BakkesModPlugin, public BakkesMod::Plugin::PluginSettingsWindow
 {
-
 	enum Statuses {
+		/// <summary>
+		/// Wait for game start
+		/// </summary>
 		WAIT,
+		/// <summary>
+		/// Request to start sended, waiting for response
+		/// </summary>
 		STARTING,
+		/// <summary>
+		/// Prediction started, waiting for end
+		/// </summary>
 		OK,
+		/// <summary>
+		/// Request to end prediction sended, waiting for response
+		/// </summary>
 		ENDING
 	};
 
+
 public:
+
 	virtual void onLoad();
 	virtual void onUnload();
 	virtual void GameStart(std::string eventName);
