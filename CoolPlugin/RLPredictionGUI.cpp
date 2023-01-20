@@ -16,49 +16,25 @@ std::string RLPrediction::GetPluginName()
 void RLPrediction::RenderSettings() {
 	ImGui::TextUnformatted("A really cool plugin");
 
-	if (ImGui::Button("Button"))
-	{ 
+	if (ImGui::Button("Autheticate")) {
 
-		socket
-
-		CurlRequest req;
-		req.url = "https://api.twitch.tv/helix/predictions";
-		req.body = R"T({
-  "broadcaster_id":"BROADID",
-  "title": "Win or Lose?",
-  "outcomes": [
-    {
-      "title": "Win"
-    },
-    {
-      "title": "Lose"
-    }
-  ],
-  "prediction_window": 60
-})T";
-		std::string s = "BROADID";
-		auto p = req.body.find(s);
-		if (p != req.body.npos)
-		{
-			req.body.replace(p, s.length(), cvarManager->getCvar(CVAR_BROADCASTER).getStringValue());
-		}
-
-		this->Log(req.body);
-
-		this->Log(req.headers["Client-Id"]);
-
-
-		req.headers = { {"Authorization", "Bearer " + cvarManager->getCvar(CVAR_TOKEN).getStringValue()},
-			{"Client-Id",cvarManager->getCvar(CVAR_CLIENTID).getStringValue()},
-			{"Content-Type", "application/json"}};
-
-		this->Log("sending body request");
-		HttpWrapper::SendCurlRequest(req, [this](int code, std::string result)
-			{
-				this->Log(result);
-			});
 	}
-
+	if (ImGui::Button("Test Start Prediction"))
+	{ 
+		this->StartPrediction();
+	}
+	if (ImGui::Button("Test Cancel Prediction"))
+	{
+		this->CancelPrediction();
+	}
+	if (ImGui::Button("Test Lose Prediction"))
+	{
+		this->LosePrediction();
+	}
+	if (ImGui::Button("Test Win Prediction"))
+	{
+		this->WinPrediction();
+	}
 	//=========== Token Inputs =====================
 	//==== Auth Token
 	static bool tokenCheck = false;
@@ -92,6 +68,10 @@ void RLPrediction::RenderSettings() {
 	if (ImGui::InputText("Broadcaster ID", broadcasterTokenValue, IM_ARRAYSIZE(broadcasterTokenValue))) {
 		broadcasterCVar.setValue(broadcasterTokenValue);
 	}
+
+#pragma region MyRegion
+
+
 
 	/*if (ImGui::Button("Ball On Top")) {
 		gameWrapper->Execute([this](GameWrapper* gw) { cvarManager->executeCommand("CoolerBallOnTop"); });
@@ -130,6 +110,17 @@ void RLPrediction::RenderSettings() {
 		std::string hoverText = "distance is " + std::to_string(distance);
 		ImGui::SetTooltip(hoverText.c_str());
 	}*/
+#pragma endregion
+}
+
+std::string Replace(std::string str, std::string findstr, std::string replaceWith) {
+	auto p = str.find(findstr);
+	if (p != str.npos)
+	{
+		str.replace(p, findstr.length(), replaceWith);
+		return str;
+	}
+	return str;
 }
 
 /*

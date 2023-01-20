@@ -14,6 +14,8 @@
 #include "fmt/core.h"
 #include "fmt/ranges.h"
 
+#include "helpers/json.hpp"
+
 extern std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
 
 template<typename S, typename... Args>
