@@ -43,6 +43,7 @@ public:
 	void LosePrediction();
 
 private:
+	bool IsEnabled = true;
 	PredictionIds ids;
 	Statuses currentStatus = WAIT;
 

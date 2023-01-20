@@ -14,7 +14,9 @@ std::string RLPrediction::GetPluginName()
 }
 
 void RLPrediction::RenderSettings() {
-	ImGui::TextUnformatted("A really cool plugin");
+	ImGui::Text("RL Twitch Predictions Plugin v%s", plugin_version);
+
+	ImGui::Checkbox("Enable plugin", &this->IsEnabled);
 
 	if (ImGui::Button("Autheticate")) {
 

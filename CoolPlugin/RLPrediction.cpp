@@ -37,6 +37,10 @@ void RLPrediction::LoadHooks()
 
 void RLPrediction::GameStart(std::string eventName)
 {
+	if (!this->IsEnabled) {
+		return;
+	}
+
 	if (gameWrapper->IsInFreeplay()) {
 		return;
 	}
@@ -149,6 +153,11 @@ void RLPrediction::StartPrediction() {
 		{
 			this->Log(std::to_string(code));
 			this->Log(result);
+			if (code != 200) {
+				this->IsEnabled = false;
+				this->currentStatus = WAIT;
+				return;
+			}
 			nlohmann::json json = nlohmann::json::parse(result.c_str());
 			nlohmann::json data = json["data"][0];
 			this->ids.id = data["id"];
