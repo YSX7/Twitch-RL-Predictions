@@ -3,7 +3,7 @@
 
 
 // BakkesMod Macro / init function.
-BAKKESMOD_PLUGIN(RLPrediction, "RL Twitch Prediction", "0.3.2", PLUGINTYPE_FREEPLAY)
+BAKKESMOD_PLUGIN(RLPrediction, "RL Twitch Prediction", plugin_version, PLUGINTYPE_FREEPLAY)
 
 // The entry point of your plugin.
 void RLPrediction::onLoad()
