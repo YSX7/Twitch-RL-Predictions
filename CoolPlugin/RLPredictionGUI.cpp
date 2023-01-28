@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "RLPrediction.h"
+#include <thread>
 
 // Don't call this yourself, BM will call this function with a pointer to the current ImGui context
 void RLPrediction::SetImGuiContext(uintptr_t ctx)
@@ -13,6 +14,8 @@ std::string RLPrediction::GetPluginName()
 	return "TwitchPrediction";
 }
 
+
+
 void RLPrediction::RenderSettings() {
 	ImGui::Text("RL Twitch Predictions Plugin v%s", plugin_version);
 
@@ -21,6 +24,17 @@ void RLPrediction::RenderSettings() {
 	if (ImGui::Button("Autheticate")) {
 
 	}
+	if (ImGui::Button("Check Prediction")) {
+		this->Log("Thread launched");
+		//std::thread bt(&RLPrediction::CheckPrediction, this);
+		std::async(std::launch::async, &RLPrediction::CheckPrediction, this);
+	}
+	ImGui::SameLine();
+		if (ImGui::Button("Check Prediction and Resolve")) {
+			this->currentStatus = OK;
+			this->GameEndedEvent("test");
+			//std::thread bt(&RLPrediction::CheckPrediction, this);
+		}
 	if (ImGui::Button("Test Start Prediction"))
 	{ 
 		this->StartPrediction();
@@ -37,6 +51,26 @@ void RLPrediction::RenderSettings() {
 	{
 		this->WinPrediction();
 	}
+	if (ImGui::Button("Test")) {
+		auto currentGame = gameWrapper->GetCurrentGameState();
+		// just to make sure you're in a match first
+		if (!currentGame)
+		{
+			this->Log("no current game");
+			return;
+		}
+		this->Log("current game OK");
+
+		auto pri = currentGame.GetLocalPrimaryPlayer();
+		if (!pri) {
+			this->Log("no local primary player");
+			return;
+		}
+		this->Log("local primary player OK");
+
+		int my_team_num = pri.GetTeamNum2();
+		this->Log(std::to_string(my_team_num));
+	}
 	//=========== Token Inputs =====================
 	//==== Auth Token
 	static bool tokenCheck = false;
@@ -47,6 +81,7 @@ void RLPrediction::RenderSettings() {
 	}
 	if (ImGui::InputText("Auth Token", authTokenValue, IM_ARRAYSIZE(authTokenValue), tokenCheck ? 0 : ImGuiInputTextFlags_Password)) {
 		tokenCVar.setValue(authTokenValue);
+		this->ids.authToken = authTokenValue;
 	}
 	ImGui::SameLine(); 
 	ImGui::Checkbox("Show", &tokenCheck);
@@ -59,6 +94,7 @@ void RLPrediction::RenderSettings() {
 	}
 	if (ImGui::InputText("Client Id", clientTokenValue, IM_ARRAYSIZE(clientTokenValue))) {
 		clientCVar.setValue(clientTokenValue);
+		this->ids.clientId = clientTokenValue;
 	}
 
 	//==== Broadcaster ID
@@ -69,6 +105,7 @@ void RLPrediction::RenderSettings() {
 	}
 	if (ImGui::InputText("Broadcaster ID", broadcasterTokenValue, IM_ARRAYSIZE(broadcasterTokenValue))) {
 		broadcasterCVar.setValue(broadcasterTokenValue);
+		this->ids.clientId = broadcasterTokenValue;
 	}
 
 #pragma region Examples

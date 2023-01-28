@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "RLPrediction.h"
+#include <future>
 
 
 // BakkesMod Macro / init function.
@@ -13,6 +14,10 @@ void RLPrediction::onLoad()
 	cvarManager->registerCvar(CVAR_TOKEN, "", "");
 	cvarManager->registerCvar(CVAR_CLIENTID, "h2sdygmx345l6kh24ao4m3fgtnok0r");
 	cvarManager->registerCvar(CVAR_BROADCASTER, "42412771");
+
+	this->ids.broadcasterId = cvarManager->getCvar(CVAR_BROADCASTER).getStringValue();
+	this->ids.clientId = cvarManager->getCvar(CVAR_CLIENTID).getStringValue();
+	this->ids.authToken = cvarManager->getCvar(CVAR_TOKEN).getStringValue();
 
 	this->LoadHooks();
 }
@@ -59,6 +64,8 @@ void RLPrediction::GameStart(std::string eventName)
 // Стартует 2 раза
 void RLPrediction::GameEndedEvent(std::string name)
 {
+	this->Log(name);
+
 	if (this->currentStatus != OK) {
 		return;
 	}
@@ -71,13 +78,17 @@ void RLPrediction::GameEndedEvent(std::string name)
 		this->Log("no current game");
 		return;
 	}
+	this->Log("current game OK");
+
 	auto pri = currentGame.GetLocalPrimaryPlayer();
-	if (!pri) { 
+	if (!pri) {
 		this->Log("no local primary player");
 		return;
 	}
+	this->Log("local primary player OK");
 
 	int my_team_num = pri.GetTeamNum2();
+	this->Log("my team num OK");
 
 	ServerWrapper server = gameWrapper->GetOnlineGame();
 	if (server.IsNull())
@@ -85,18 +96,33 @@ void RLPrediction::GameEndedEvent(std::string name)
 		this->Log("No server");
 		return;
 	}
+	this->Log("server OK");
 	TeamWrapper winningTeam = server.GetGameWinner();
 	if (winningTeam.IsNull())
 	{
 		this->Log("No winning team");
 		return;
 	}
-
+	this->Log("winning team OK");
 	int teamnum = winningTeam.GetTeamNum();
-
+	this->Log("teamnum OK");
 	this->Log("GameEnd => winning team:" + std::to_string(teamnum) + " my_team_num:" + std::to_string(my_team_num));
 
-	if (teamnum == my_team_num)
+	bool isWin = teamnum == my_team_num;
+
+	std::async(std::launch::async, &RLPrediction::ResolvePrediction, this, isWin);
+}
+
+void RLPrediction::ResolvePrediction(bool isWin) {
+
+	if (!this->CheckPrediction())
+	{
+		this->CancelPrediction();
+		return;
+	}
+	
+
+	if (isWin)
 	{
 		WinPrediction();
 	}
@@ -104,6 +130,7 @@ void RLPrediction::GameEndedEvent(std::string name)
 		LosePrediction();
 	}
 }
+
 
 void RLPrediction::GameDestroyed(std::string eventName)
 {
@@ -160,9 +187,9 @@ void RLPrediction::StartPrediction() {
 			}
 			nlohmann::json json = nlohmann::json::parse(result.c_str());
 			nlohmann::json data = json["data"][0];
-			this->ids.id = data["id"];
-			this->ids.winId = data["outcomes"][0]["id"];
-			this->ids.loseId = data["outcomes"][1]["id"];
+			this->ids.prediction.id = data["id"];
+			this->ids.prediction.winId = data["outcomes"][0]["id"];
+			this->ids.prediction.loseId = data["outcomes"][1]["id"];
 			this->currentStatus = OK;
 		});
 }
@@ -173,10 +200,10 @@ void RLPrediction::CancelPrediction() {
 	CurlRequest req;
 	req.url = "https://api.twitch.tv/helix/predictions?broadcaster_id=BROADID&id=PREDID&status=CANCELED";
 	req.verb = "PATCH";
-	req.url = Replace(req.url, "BROADID", cvarManager->getCvar(CVAR_BROADCASTER).getStringValue());
-	req.url = Replace(req.url, "PREDID", this->ids.id);
-	req.headers = { {"Authorization", "Bearer " + cvarManager->getCvar(CVAR_TOKEN).getStringValue()},
-		{"Client-Id",cvarManager->getCvar(CVAR_CLIENTID).getStringValue()},
+	req.url = Replace(req.url, "BROADID", this->ids.broadcasterId);
+	req.url = Replace(req.url, "PREDID", this->ids.prediction.id);
+	req.headers = { {"Authorization", "Bearer " + this->ids.authToken},
+		{"Client-Id",this->ids.clientId},
 		{"Content-Type", "application/json"} };
 	HttpWrapper::SendCurlRequest(req, [this](int code, std::string result)
 		{
@@ -185,16 +212,15 @@ void RLPrediction::CancelPrediction() {
 			this->currentStatus = WAIT;
 		});
 }
-
 void RLPrediction::WinPrediction() {
 	CurlRequest req;
 	req.url = "https://api.twitch.tv/helix/predictions?broadcaster_id=BROADID&id=PREDID&status=RESOLVED&winning_outcome_id=OUTCOMEID";
 	req.verb = "PATCH";
-	req.url = Replace(req.url, "BROADID", cvarManager->getCvar(CVAR_BROADCASTER).getStringValue());
-	req.url = Replace(req.url, "PREDID", this->ids.id);
-	req.url = Replace(req.url, "OUTCOMEID", this->ids.winId);
-	req.headers = { {"Authorization", "Bearer " + cvarManager->getCvar(CVAR_TOKEN).getStringValue()},
-		{"Client-Id",cvarManager->getCvar(CVAR_CLIENTID).getStringValue()},
+	req.url = Replace(req.url, "BROADID", this->ids.broadcasterId);
+	req.url = Replace(req.url, "PREDID", this->ids.prediction.id);
+	req.url = Replace(req.url, "OUTCOMEID", this->ids.prediction.winId);
+	req.headers = { {"Authorization", "Bearer " + this->ids.authToken},
+		{"Client-Id",this->ids.clientId},
 		{"Content-Type", "application/json"} };
 	HttpWrapper::SendCurlRequest(req, [this](int code, std::string result)
 		{
@@ -208,8 +234,8 @@ void RLPrediction::LosePrediction() {
 	req.url = "https://api.twitch.tv/helix/predictions?broadcaster_id=BROADID&id=PREDID&status=RESOLVED&winning_outcome_id=OUTCOMEID";
 	req.verb = "PATCH";
 	req.url = Replace(req.url, "BROADID", cvarManager->getCvar(CVAR_BROADCASTER).getStringValue());
-	req.url = Replace(req.url, "PREDID", this->ids.id);
-	req.url = Replace(req.url, "OUTCOMEID", this->ids.loseId);
+	req.url = Replace(req.url, "PREDID", this->ids.prediction.id);
+	req.url = Replace(req.url, "OUTCOMEID", this->ids.prediction.loseId);
 	req.headers = { {"Authorization", "Bearer " + cvarManager->getCvar(CVAR_TOKEN).getStringValue()},
 		{"Client-Id",cvarManager->getCvar(CVAR_CLIENTID).getStringValue()},
 		{"Content-Type", "application/json"} };
@@ -219,4 +245,41 @@ void RLPrediction::LosePrediction() {
 			this->Log(result);
 			this->currentStatus = WAIT;
 		});
+}
+
+std::promise<bool> promise;
+
+bool RLPrediction::CheckPrediction() {
+	this->Log("Thread exec start");
+	promise = std::promise<bool>();
+	CurlRequest req;
+	req.url = "https://api.twitch.tv/helix/predictions?broadcaster_id=BROADID&id=PREDID";
+	req.url = Replace(req.url, "BROADID", this->ids.broadcasterId);
+	req.url = Replace(req.url, "PREDID", this->ids.prediction.id);
+	req.headers = { {"Authorization", "Bearer " + this->ids.authToken},
+		{"Client-Id",this->ids.clientId},
+		{"Content-Type", "application/json"} };
+
+	this->Log("Getting future");
+	std::future<bool> future = promise.get_future();
+	this->Log("Starting request");
+	HttpWrapper::SendCurlRequest(req, [this](int code, std::string result)
+		{
+			this->Log(std::to_string(code));
+			this->Log(result);
+			if (code != 200) {
+				promise.set_value(false);
+				return;
+			}
+			nlohmann::json json = nlohmann::json::parse(result.c_str());
+			nlohmann::json data = json["data"][0];
+			bool resultB = !data["outcomes"][0]["top_predictors"].is_null() && !data["outcomes"][1]["top_predictors"].is_null();
+
+			promise.set_value(resultB);
+		
+		});
+	this->Log("Waiting for response...");
+	bool b = future.get();
+	this->Log("Response get");
+	return b;
 }

@@ -5,6 +5,7 @@
 #include "bakkesmod/plugin/PluginSettingsWindow.h"
 
 #include "version.h"
+#include <future>
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
 
 const std::string CVAR_TOKEN = "RLPredict_auth_token";
@@ -17,6 +18,13 @@ struct PredictionIds {
 	std::string id;
 	std::string winId;
 	std::string loseId;
+};
+
+struct Ids {
+	PredictionIds prediction;
+	std::string broadcasterId;
+	std::string authToken;
+	std::string clientId;
 };
 
 class RLPrediction : public BakkesMod::Plugin::BakkesModPlugin, public BakkesMod::Plugin::PluginSettingsWindow
@@ -52,12 +60,14 @@ public:
 	void GameEndedEvent(std::string name);
 	void StartPrediction();
 	void CancelPrediction();
+	void ResolvePrediction(bool isWin);
 	void WinPrediction();
 	void LosePrediction();
+	bool CheckPrediction();
 
 private:
 	bool IsEnabled = true;
-	PredictionIds ids;
+	Ids ids;
 	Statuses currentStatus = WAIT;
 
 	void Log(std::string msg);
