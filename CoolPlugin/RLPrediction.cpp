@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "RLPrediction.h"
 #include <future>
+#include <format>
 
 
 // BakkesMod Macro / init function.
@@ -121,7 +122,6 @@ void RLPrediction::ResolvePrediction(bool isWin) {
 		return;
 	}
 	
-
 	if (isWin)
 	{
 		WinPrediction();
@@ -198,10 +198,8 @@ void RLPrediction::StartPrediction() {
 //TODO: объединить завершение предикшена в одну функцию
 void RLPrediction::CancelPrediction() {
 	CurlRequest req;
-	req.url = "https://api.twitch.tv/helix/predictions?broadcaster_id=BROADID&id=PREDID&status=CANCELED";
+	req.url = std::format("https://api.twitch.tv/helix/predictions?broadcaster_id={}&id={}&status=CANCELED",this->ids.broadcasterId, this->ids.prediction.id);
 	req.verb = "PATCH";
-	req.url = Replace(req.url, "BROADID", this->ids.broadcasterId);
-	req.url = Replace(req.url, "PREDID", this->ids.prediction.id);
 	req.headers = { {"Authorization", "Bearer " + this->ids.authToken},
 		{"Client-Id",this->ids.clientId},
 		{"Content-Type", "application/json"} };
@@ -214,11 +212,9 @@ void RLPrediction::CancelPrediction() {
 }
 void RLPrediction::WinPrediction() {
 	CurlRequest req;
-	req.url = "https://api.twitch.tv/helix/predictions?broadcaster_id=BROADID&id=PREDID&status=RESOLVED&winning_outcome_id=OUTCOMEID";
+	req.url = std::format("https://api.twitch.tv/helix/predictions?broadcaster_id={}&id={}&status=RESOLVED&winning_outcome_id={}",
+		ids.broadcasterId, this->ids.prediction.id, ids.prediction.winId);
 	req.verb = "PATCH";
-	req.url = Replace(req.url, "BROADID", this->ids.broadcasterId);
-	req.url = Replace(req.url, "PREDID", this->ids.prediction.id);
-	req.url = Replace(req.url, "OUTCOMEID", this->ids.prediction.winId);
 	req.headers = { {"Authorization", "Bearer " + this->ids.authToken},
 		{"Client-Id",this->ids.clientId},
 		{"Content-Type", "application/json"} };
@@ -231,11 +227,10 @@ void RLPrediction::WinPrediction() {
 }
 void RLPrediction::LosePrediction() {
 	CurlRequest req;
-	req.url = "https://api.twitch.tv/helix/predictions?broadcaster_id=BROADID&id=PREDID&status=RESOLVED&winning_outcome_id=OUTCOMEID";
+	req.url = std::format("https://api.twitch.tv/helix/predictions?broadcaster_id={}&id={}&status=RESOLVED&winning_outcome_id={}",
+		cvarManager->getCvar(CVAR_BROADCASTER).getStringValue(), this->ids.prediction.id, this->ids.prediction.loseId);
+
 	req.verb = "PATCH";
-	req.url = Replace(req.url, "BROADID", cvarManager->getCvar(CVAR_BROADCASTER).getStringValue());
-	req.url = Replace(req.url, "PREDID", this->ids.prediction.id);
-	req.url = Replace(req.url, "OUTCOMEID", this->ids.prediction.loseId);
 	req.headers = { {"Authorization", "Bearer " + cvarManager->getCvar(CVAR_TOKEN).getStringValue()},
 		{"Client-Id",cvarManager->getCvar(CVAR_CLIENTID).getStringValue()},
 		{"Content-Type", "application/json"} };
@@ -253,9 +248,8 @@ bool RLPrediction::CheckPrediction() {
 	this->Log("Thread exec start");
 	promise = std::promise<bool>();
 	CurlRequest req;
-	req.url = "https://api.twitch.tv/helix/predictions?broadcaster_id=BROADID&id=PREDID";
-	req.url = Replace(req.url, "BROADID", this->ids.broadcasterId);
-	req.url = Replace(req.url, "PREDID", this->ids.prediction.id);
+	req.url = std::format("https://api.twitch.tv/helix/predictions?broadcaster_id={}&id={}",
+		this->ids.broadcasterId, this->ids.prediction.id);
 	req.headers = { {"Authorization", "Bearer " + this->ids.authToken},
 		{"Client-Id",this->ids.clientId},
 		{"Content-Type", "application/json"} };
